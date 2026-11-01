@@ -96,6 +96,7 @@
         <label class="flex items-center text-sm">
           <input type="checkbox" x-model="newPrice.hasBill" class="mr-2"> I have a bill to upload (verified badge)
         </label>
+        <p class="text-xs text-gray-500">Posts are user opinions, not verified by Spill the Tank. No names, addresses or phone numbers of individuals.</p>
         <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded font-medium">Post Price Anonymously</button>
       </form>
 
@@ -111,6 +112,7 @@
             <div class="text-xs mt-1" x-show="p.fees && p.fees.length" x-text="'Fees noted: ' + p.fees.join(', ')"></div>
             <div class="text-xs mt-1" x-text="'Posted by ' + p.handle + ' · ' + daysAgo(p.timestamp)"></div>
             <span x-show="p.verified" class="inline-block mt-1 text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">Verified bill</span>
+            <button @click="reportPost(p.id, 'Prices')" class="text-xs text-gray-400 underline mt-1">Report</button>
           </div>
         </template>
         <p x-show="prices.length === 0" class="text-center text-gray-500 py-8">No prices yet. Be the first!</p>
@@ -160,6 +162,7 @@
         <select x-model="newPost.category" class="w-full p-2 border rounded dark:bg-gray-700">
           <option>prices</option><option>fees</option><option>delivery</option><option>service</option><option>switching tips</option><option>rants</option>
         </select>
+        <p class="text-xs text-gray-500 mb-2">Posts are user opinions, not verified by Spill the Tank. No names, addresses or phone numbers of individuals.</p>
         <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded">Post Anonymously</button>
       </form>
       <template x-for="d in discussions" :key="d.id">
@@ -167,6 +170,7 @@
           <div class="font-semibold" x-text="d.title"></div>
           <div x-text="d.body"></div>
           <div class="text-xs text-gray-500 mt-1" x-text="d.category + ' · by ' + d.handle + ' · ' + d.upvotes + ' upvotes'"></div>
+          <button @click="reportPost(d.id, 'Discuss')" class="text-xs text-gray-400 underline">Report</button>
         </div>
       </template>
       <p x-show="discussions.length === 0" class="text-center text-gray-500">Start the conversation.</p>
@@ -213,6 +217,17 @@
   </div>
 
   <script>
+    const WEB_APP_URL = 'https://script.google.com/macros/s/REPLACE_WITH_DEPLOYED_URL/exec';
+
+    function getDeviceId() {
+      let id = localStorage.getItem('stt_device');
+      if (!id) {
+        id = 'd' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        localStorage.setItem('stt_device', id);
+      }
+      return id;
+    }
+
     function app() {
       return {
         dark: false,
@@ -227,33 +242,109 @@
         newPost: { title: '', body: '', category: 'prices' },
         init() {
           this.handle = this.randomHandle();
-          this.prices = JSON.parse(localStorage.getItem('stt_prices') || '[]');
-          this.discussions = JSON.parse(localStorage.getItem('stt_discuss') || '[]');
+          this.deviceId = getDeviceId();
           if (localStorage.getItem('stt_dark') === '1') { this.dark = true; document.documentElement.classList.add('dark'); }
+          this.loadPosts();
         },
         randomHandle() {
           const adj = ['Blue', 'Red', 'Quiet', 'Steady', 'Northern', 'Lake', 'Pine', 'Frost'];
           const noun = ['Regulator', 'Tank', 'Gauge', 'Delivery', 'Fill', 'Valve', 'Line', 'Burner'];
           return adj[Math.floor(Math.random()*adj.length)] + ' ' + noun[Math.floor(Math.random()*noun.length)] + ' ' + Math.floor(Math.random()*900 + 100);
         },
-        addPrice() {
-          const p = {
-            id: Date.now(),
-            ...this.newPrice,
-            handle: this.anonymous ? this.handle : 'Named User',
-            timestamp: Date.now(),
-            verified: this.newPrice.hasBill
-          };
-          this.prices.unshift(p);
-          localStorage.setItem('stt_prices', JSON.stringify(this.prices));
-          this.newPrice = { supplier: '', county: '', town: '', price: '', type: '', tank: 'owned', date: new Date().toISOString().slice(0,10), hasBill: false, fees: [] };
-          alert('Price posted anonymously. (Demo: stored locally in this browser only.)');
+        async addPrice() {
+          try {
+            const res = await fetch(WEB_APP_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                type: 'price',
+                deviceId: this.deviceId,
+                town_zip: this.newPrice.town,
+                supplier: this.newPrice.supplier,
+                price_type: this.newPrice.type,
+                price_per_gal: this.newPrice.price,
+                fees_checked: this.newPrice.fees,
+                comment: '',
+                display_name: this.handle,
+                hide_name: this.anonymous
+              })
+            });
+            const data = await res.json();
+            if (!data.ok) throw new Error(data.error || 'Post failed');
+            this.newPrice = { supplier: '', county: '', town: '', price: '', type: '', tank: 'owned', date: new Date().toISOString().slice(0,10), hasBill: false, fees: [] };
+            await this.loadPosts();
+            alert('Price posted. It will appear for everyone shortly.');
+          } catch (err) {
+            alert('Could not post right now. Check your connection and try again. (' + err.message + ')');
+          }
         },
-        addPost() {
-          const d = { id: Date.now(), ...this.newPost, handle: this.anonymous ? this.handle : 'Named User', upvotes: 0, timestamp: Date.now() };
-          this.discussions.unshift(d);
-          localStorage.setItem('stt_discuss', JSON.stringify(this.discussions));
-          this.newPost = { title: '', body: '', category: 'prices' };
+        async addPost() {
+          try {
+            const res = await fetch(WEB_APP_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                type: 'discuss',
+                deviceId: this.deviceId,
+                town_zip: '',
+                supplier: '',
+                post: this.newPost.title + '\n' + this.newPost.body,
+                display_name: this.handle,
+                hide_name: this.anonymous
+              })
+            });
+            const data = await res.json();
+            if (!data.ok) throw new Error(data.error || 'Post failed');
+            this.newPost = { title: '', body: '', category: 'prices' };
+            await this.loadPosts();
+          } catch (err) {
+            alert('Could not post right now. Check your connection and try again. (' + err.message + ')');
+          }
+        },
+        async loadPosts() {
+          try {
+            const res = await fetch(WEB_APP_URL);
+            if (!res.ok) throw new Error('Network error');
+            const data = await res.json();
+            this.prices = (data.prices || []).map(p => ({
+              id: p.timestamp,
+              supplier: p.supplier,
+              town: p.town_zip,
+              county: '',
+              price: p.price_per_gal,
+              type: p.price_type,
+              tank: '',
+              date: (p.timestamp || '').slice(0,10),
+              fees: (p.fees_checked || '').split(', ').filter(Boolean),
+              handle: p.display_name,
+              timestamp: new Date(p.timestamp).getTime(),
+              verified: false
+            }));
+            this.discussions = (data.discuss || []).map(d => ({
+              id: d.timestamp,
+              title: (d.post || '').split('\n')[0],
+              body: (d.post || '').split('\n').slice(1).join('\n'),
+              category: '',
+              handle: d.display_name,
+              upvotes: 0,
+              timestamp: new Date(d.timestamp).getTime()
+            }));
+          } catch (err) {
+            console.error(err);
+            // keep existing arrays; show nothing new if offline
+          }
+        },
+        async reportPost(timestamp, sheet) {
+          try {
+            await fetch(WEB_APP_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'report', timestamp, sheet, deviceId: this.deviceId })
+            });
+            await this.loadPosts();
+          } catch (err) {
+            alert('Could not report right now.');
+          }
         },
         get companyStats() {
           const map = {};
