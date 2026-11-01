@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spill the Tank — Anonymous Propane Prices</title>
+  <meta name="description" content="Share what you pay for propane anonymously. Nobody knows it's you. Northern Michigan and beyond.">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1e40af">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+  </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
+  <div x-data="app()" x-init="init()" class="max-w-md mx-auto">
+    <!-- Header -->
+    <header class="sticky top-0 z-10 bg-white dark:bg-gray-800 shadow-sm p-4 flex justify-between items-center">
+      <h1 class="text-xl font-bold text-blue-700 dark:text-blue-400">Spill the Tank</h1>
+      <button @click="dark = !dark; document.documentElement.classList.toggle('dark', dark)" class="text-sm px-3 py-1 rounded-full bg-gray-200 dark:bg-gray-700">
+        <span x-text="dark ? 'Light' : 'Dark'"></span>
+      </button>
+    </header>
+
+    <!-- HERO HEADER (large, top of home) -->
+    <section class="p-6 bg-gradient-to-b from-blue-100 to-blue-50 dark:from-blue-950 dark:to-gray-900 text-center">
+      <h2 class="text-2xl md:text-3xl font-bold leading-tight mb-3">That $1.59 prebuy price? Do you know what you'll REALLY pay in January?</h2>
+      <p class="text-sm md:text-base text-gray-700 dark:text-gray-300 mb-5">Any propane company can advertise a low locked-in price during contract season. Once that season ends, will-call customers pay a different price, often much higher. And the advertised price is usually just the starting price: it doesn't include sales tax, service or delivery fees, environmental/hazmat fees, or tank rental and lease fees.</p>
+      <button @click="tab = 'explainer'" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-3 rounded-lg shadow">Know the difference → Locked-in vs. Will-call</button>
+    </section>
+
+    <!-- Anonymous Toggle -->
+    <section class="p-6 text-center bg-blue-50 dark:bg-blue-950">
+      <div class="text-4xl mb-2">🔒</div>
+      <h2 class="text-2xl font-bold mb-4">Stay Anonymous</h2>
+      <label class="inline-flex items-center cursor-pointer">
+        <input type="checkbox" x-model="anonymous" class="sr-only peer">
+        <div class="relative w-14 h-7 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
+        <span class="ml-3 text-lg font-medium" x-text="anonymous ? 'ON — Your posts are anonymous' : 'OFF — You can set a name'"></span>
+      </label>
+      <p class="mt-3 text-sm text-gray-600 dark:text-gray-400">Default ON. Random handle like “Blue Regulator 482”. No name, no email required to post.</p>
+      <p class="mt-2 text-xs" x-show="anonymous" x-text="'Your handle: ' + handle"></p>
+    </section>
+
+    <!-- Nav -->
+    <nav class="flex overflow-x-auto bg-white dark:bg-gray-800 border-b dark:border-gray-700 text-sm">
+      <button @click="tab = 'prices'" :class="tab === 'prices' ? 'border-b-2 border-blue-600 font-semibold' : ''" class="px-4 py-3 whitespace-nowrap">Prices</button>
+      <button @click="tab = 'explainer'" :class="tab === 'explainer' ? 'border-b-2 border-blue-600 font-semibold' : ''" class="px-4 py-3 whitespace-nowrap">Explainer</button>
+      <button @click="tab = 'discuss'" :class="tab === 'discuss' ? 'border-b-2 border-blue-600 font-semibold' : ''" class="px-4 py-3 whitespace-nowrap">Discuss</button>
+      <button @click="tab = 'companies'" :class="tab === 'companies' ? 'border-b-2 border-blue-600 font-semibold' : ''" class="px-4 py-3 whitespace-nowrap">Companies</button>
+      <button @click="tab = 'about'" :class="tab === 'about' ? 'border-b-2 border-blue-600 font-semibold' : ''" class="px-4 py-3 whitespace-nowrap">About</button>
+    </nav>
+
+    <!-- Prices Tab -->
+    <div x-show="tab === 'prices'" class="p-4">
+      <h2 class="text-lg font-semibold mb-3">Price Board</h2>
+      <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Be the first to post your price. Town/ZIP only — never GPS. Locked-in and will-call prices are shown separately and never averaged together.</p>
+      
+      <form @submit.prevent="addPrice" class="space-y-3 bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+        <input x-model="newPrice.supplier" placeholder="Supplier / Company" required class="w-full p-2 border rounded dark:bg-gray-700">
+        <select x-model="newPrice.county" required class="w-full p-2 border rounded dark:bg-gray-700">
+          <option value="">County</option>
+          <template x-for="c in counties"><option :value="c" x-text="c"></option></template>
+        </select>
+        <input x-model="newPrice.town" placeholder="Town or ZIP" required class="w-full p-2 border rounded dark:bg-gray-700">
+        <input x-model.number="newPrice.price" type="number" step="0.01" placeholder="$ per gallon (base price)" required class="w-full p-2 border rounded dark:bg-gray-700">
+        <select x-model="newPrice.type" required class="w-full p-2 border rounded dark:bg-gray-700">
+          <option value="">Price type</option>
+          <option value="locked-in / prebuy">locked-in / prebuy</option>
+          <option value="will-call">will-call</option>
+          <option value="budget">budget</option>
+        </select>
+        <select x-model="newPrice.tank" class="w-full p-2 border rounded dark:bg-gray-700">
+          <option>owned</option>
+          <option>leased</option>
+        </select>
+        <div class="text-sm font-medium">Fees included in what you paid (check all that apply):</div>
+        <div class="grid grid-cols-2 gap-2 text-sm">
+          <template x-for="fee in feeOptions">
+            <label class="flex items-center">
+              <input type="checkbox" :value="fee" x-model="newPrice.fees" class="mr-2">
+              <span x-text="fee"></span>
+            </label>
+          </template>
+        </div>
+        <input type="date" x-model="newPrice.date" class="w-full p-2 border rounded dark:bg-gray-700">
+        <label class="flex items-center text-sm">
+          <input type="checkbox" x-model="newPrice.hasBill" class="mr-2"> I have a bill to upload (verified badge)
+        </label>
+        <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded font-medium">Post Price Anonymously</button>
+      </form>
+
+      <div class="mt-6 space-y-3">
+        <template x-for="p in prices" :key="p.id">
+          <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow text-sm">
+            <div class="flex justify-between">
+              <span class="font-bold" x-text="p.supplier"></span>
+              <span class="text-blue-600 font-semibold" x-text="'$' + parseFloat(p.price).toFixed(2) + '/gal'"></span>
+            </div>
+            <div x-text="p.town + ', ' + p.county"></div>
+            <div class="text-xs text-gray-500" x-text="p.type + ' · ' + p.tank + ' · ' + p.date"></div>
+            <div class="text-xs mt-1" x-show="p.fees && p.fees.length" x-text="'Fees noted: ' + p.fees.join(', ')"></div>
+            <div class="text-xs mt-1" x-text="'Posted by ' + p.handle + ' · ' + daysAgo(p.timestamp)"></div>
+            <span x-show="p.verified" class="inline-block mt-1 text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">Verified bill</span>
+          </div>
+        </template>
+        <p x-show="prices.length === 0" class="text-center text-gray-500 py-8">No prices yet. Be the first!</p>
+      </div>
+    </div>
+
+    <!-- Explainer Tab -->
+    <div x-show="tab === 'explainer'" class="p-4 space-y-5 text-sm">
+      <h2 class="text-xl font-bold">Locked-in / Prebuy vs. Will-call vs. Budget</h2>
+      <p>Locked-in or prebuy prices are rates you agree to in advance (often in spring or summer) for a set volume or period. Will-call prices are what you pay when you simply call for a delivery with no prior agreement. Budget plans typically spread estimated annual costs into equal monthly payments, with a true-up at the end.</p>
+      <p>When a locked-in or prebuy contract ends mid-winter, remaining deliveries usually switch to the current will-call rate, which is frequently higher. The advertised locked-in price is almost always the base per-gallon rate only.</p>
+
+      <h3 class="font-semibold text-base">Common add-ons to ask about</h3>
+      <ul class="list-disc pl-5 space-y-1">
+        <li>Sales tax</li>
+        <li>Delivery or service fees</li>
+        <li>Environmental / hazmat fees</li>
+        <li>Tank rental or lease fees</li>
+        <li>Minimum-delivery charges</li>
+        <li>After-hours or emergency delivery fees</li>
+        <li>Leak check fees</li>
+        <li>Tank removal or pickup fees</li>
+      </ul>
+      <p>These can add significantly to the total cost. Always ask for the all-in price or a full fee schedule.</p>
+
+      <h3 class="font-semibold text-base">Questions to ask your propane company before you sign</h3>
+      <ul class="list-disc pl-5 space-y-1">
+        <li>Is this price locked for the full season or a specific volume? What happens if I need more?</li>
+        <li>What is the current will-call price, and how often does it change?</li>
+        <li>Which fees are included in the quoted price? Which are extra?</li>
+        <li>Is the tank owned or leased? What is the monthly or annual lease cost?</li>
+        <li>Are there minimum-delivery, after-hours, or leak-check charges?</li>
+        <li>What is the process and cost if I switch suppliers or remove the tank later?</li>
+        <li>Can I see a recent sample bill that shows every line item?</li>
+      </ul>
+      <p class="text-xs text-gray-500">This is general information only. Pricing structures vary by company and region. Always confirm details directly with your supplier.</p>
+      <button @click="tab = 'prices'" class="w-full bg-blue-600 text-white py-2 rounded mt-4">Back to Price Board</button>
+    </div>
+
+    <!-- Discuss Tab -->
+    <div x-show="tab === 'discuss'" class="p-4">
+      <h2 class="text-lg font-semibold mb-3">Discussion</h2>
+      <p class="text-sm mb-4">Threads by town or company. Upvotes. Categories: prices, fees, delivery, service, switching tips, rants.</p>
+      <form @submit.prevent="addPost" class="space-y-2 mb-4">
+        <input x-model="newPost.title" placeholder="Thread title" required class="w-full p-2 border rounded dark:bg-gray-700">
+        <textarea x-model="newPost.body" placeholder="Your anonymous post..." required class="w-full p-2 border rounded dark:bg-gray-700" rows="3"></textarea>
+        <select x-model="newPost.category" class="w-full p-2 border rounded dark:bg-gray-700">
+          <option>prices</option><option>fees</option><option>delivery</option><option>service</option><option>switching tips</option><option>rants</option>
+        </select>
+        <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded">Post Anonymously</button>
+      </form>
+      <template x-for="d in discussions" :key="d.id">
+        <div class="bg-white dark:bg-gray-800 p-3 rounded mb-2 text-sm">
+          <div class="font-semibold" x-text="d.title"></div>
+          <div x-text="d.body"></div>
+          <div class="text-xs text-gray-500 mt-1" x-text="d.category + ' · by ' + d.handle + ' · ' + d.upvotes + ' upvotes'"></div>
+        </div>
+      </template>
+      <p x-show="discussions.length === 0" class="text-center text-gray-500">Start the conversation.</p>
+    </div>
+
+    <!-- Companies Tab -->
+    <div x-show="tab === 'companies'" class="p-4">
+      <h2 class="text-lg font-semibold mb-3">Companies</h2>
+      <p class="text-sm mb-4">Auto-built from posts. Locked-in and will-call averages are calculated and shown separately (never combined).</p>
+      <template x-for="c in companyStats" :key="c.name">
+        <div class="bg-white dark:bg-gray-800 p-3 rounded mb-2">
+          <div class="font-bold" x-text="c.name"></div>
+          <div class="text-sm" x-show="c.lockedAvg" x-text="'Locked-in / prebuy avg: $' + c.lockedAvg.toFixed(2) + '/gal (' + c.lockedCount + ' reports)'"></div>
+          <div class="text-sm" x-show="c.willAvg" x-text="'Will-call avg: $' + c.willAvg.toFixed(2) + '/gal (' + c.willCount + ' reports)'"></div>
+          <div class="text-sm" x-show="c.budgetAvg" x-text="'Budget avg: $' + c.budgetAvg.toFixed(2) + '/gal (' + c.budgetCount + ' reports)'"></div>
+          <div class="text-xs text-gray-500" x-show="!c.lockedAvg && !c.willAvg && !c.budgetAvg">No typed prices yet</div>
+        </div>
+      </template>
+      <p x-show="companyStats.length === 0" class="text-gray-500 text-center">Companies appear after prices are posted.</p>
+    </div>
+
+    <!-- About / Privacy -->
+    <div x-show="tab === 'about'" class="p-4 space-y-4 text-sm">
+      <h2 class="text-lg font-semibold">About Spill the Tank</h2>
+      <p>Spill the Tank is a public place to share propane prices and experiences without anyone knowing who you are. Anonymity is the feature.</p>
+      <p><strong>Operated by Fair America LLC.</strong></p>
+      <h3 class="font-semibold mt-4">Privacy (plain English)</h3>
+      <ul class="list-disc pl-5 space-y-1">
+        <li>No account required to read or post.</li>
+        <li>Optional email only to save your handle — never shown, never sold.</li>
+        <li>We do not store IP addresses with posts.</li>
+        <li>Location is town or ZIP you choose — never GPS.</li>
+        <li>Uploaded bills: EXIF/GPS stripped, names/account #s/addresses/phones auto-blurred before you confirm.</li>
+        <li>Random handle when anonymous.</li>
+      </ul>
+      <p class="mt-4 text-xs">Terms: opinions OK. No threats, no doxxing, no false statements of fact. Report button on posts. We remove illegal content promptly.</p>
+    </div>
+
+    <!-- Footer -->
+    <footer class="p-4 text-center text-xs text-gray-500 border-t dark:border-gray-700 mt-8">
+      Spill the Tank is operated by Fair America LLC.<br>
+      <button @click="tab = 'about'" class="underline">About & Privacy</button>
+    </footer>
+  </div>
+
+  <script>
+    function app() {
+      return {
+        dark: false,
+        tab: 'prices',
+        anonymous: true,
+        handle: '',
+        counties: ['Antrim', 'Charlevoix', 'Emmet', 'Otsego', 'Kalkaska', 'Grand Traverse', 'Cheboygan', 'Crawford'],
+        feeOptions: ['sales tax', 'delivery/service', 'environmental/hazmat', 'tank rent/lease', 'minimum-delivery', 'after-hours', 'leak check', 'removal'],
+        prices: [],
+        discussions: [],
+        newPrice: { supplier: '', county: '', town: '', price: '', type: '', tank: 'owned', date: new Date().toISOString().slice(0,10), hasBill: false, fees: [] },
+        newPost: { title: '', body: '', category: 'prices' },
+        init() {
+          this.handle = this.randomHandle();
+          this.prices = JSON.parse(localStorage.getItem('stt_prices') || '[]');
+          this.discussions = JSON.parse(localStorage.getItem('stt_discuss') || '[]');
+          if (localStorage.getItem('stt_dark') === '1') { this.dark = true; document.documentElement.classList.add('dark'); }
+        },
+        randomHandle() {
+          const adj = ['Blue', 'Red', 'Quiet', 'Steady', 'Northern', 'Lake', 'Pine', 'Frost'];
+          const noun = ['Regulator', 'Tank', 'Gauge', 'Delivery', 'Fill', 'Valve', 'Line', 'Burner'];
+          return adj[Math.floor(Math.random()*adj.length)] + ' ' + noun[Math.floor(Math.random()*noun.length)] + ' ' + Math.floor(Math.random()*900 + 100);
+        },
+        addPrice() {
+          const p = {
+            id: Date.now(),
+            ...this.newPrice,
+            handle: this.anonymous ? this.handle : 'Named User',
+            timestamp: Date.now(),
+            verified: this.newPrice.hasBill
+          };
+          this.prices.unshift(p);
+          localStorage.setItem('stt_prices', JSON.stringify(this.prices));
+          this.newPrice = { supplier: '', county: '', town: '', price: '', type: '', tank: 'owned', date: new Date().toISOString().slice(0,10), hasBill: false, fees: [] };
+          alert('Price posted anonymously. (Demo: stored locally in this browser only.)');
+        },
+        addPost() {
+          const d = { id: Date.now(), ...this.newPost, handle: this.anonymous ? this.handle : 'Named User', upvotes: 0, timestamp: Date.now() };
+          this.discussions.unshift(d);
+          localStorage.setItem('stt_discuss', JSON.stringify(this.discussions));
+          this.newPost = { title: '', body: '', category: 'prices' };
+        },
+        get companyStats() {
+          const map = {};
+          this.prices.forEach(p => {
+            if (!map[p.supplier]) map[p.supplier] = { name: p.supplier, lockedSum: 0, lockedCount: 0, willSum: 0, willCount: 0, budgetSum: 0, budgetCount: 0 };
+            const price = parseFloat(p.price);
+            if (p.type && p.type.includes('locked')) { map[p.supplier].lockedSum += price; map[p.supplier].lockedCount++; }
+            else if (p.type === 'will-call') { map[p.supplier].willSum += price; map[p.supplier].willCount++; }
+            else if (p.type === 'budget') { map[p.supplier].budgetSum += price; map[p.supplier].budgetCount++; }
+          });
+          return Object.values(map).map(c => ({
+            ...c,
+            lockedAvg: c.lockedCount ? c.lockedSum / c.lockedCount : null,
+            willAvg: c.willCount ? c.willSum / c.willCount : null,
+            budgetAvg: c.budgetCount ? c.budgetSum / c.budgetCount : null
+          }));
+        },
+        daysAgo(ts) {
+          const d = Math.floor((Date.now() - ts) / 86400000);
+          return d === 0 ? 'today' : d + ' days ago';
+        }
+      }
+    }
+  </script>
+</body>
+</html>
