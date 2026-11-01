@@ -6,6 +6,8 @@
   <title>Spill the Tank — Anonymous Propane Prices</title>
   <meta name="description" content="Share what you pay for propane anonymously. Nobody knows it's you. Northern Michigan and beyond.">
   <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="apple-touch-icon" href="assets/icon-192.png">
   <meta name="theme-color" content="#1e40af">
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -17,17 +19,23 @@
   <div x-data="app()" x-init="init()" class="max-w-md mx-auto">
     <!-- Header -->
     <header class="sticky top-0 z-10 bg-white dark:bg-gray-800 shadow-sm p-4 flex justify-between items-center">
-      <h1 class="text-xl font-bold text-blue-700 dark:text-blue-400">Spill the Tank</h1>
+      <div class="flex items-center gap-2">
+        <img src="assets/icon-48.png" alt="Spill the Tank" class="w-8 h-8 rounded-full">
+        <h1 class="text-xl font-bold text-blue-700 dark:text-blue-400">Spill the Tank</h1>
+      </div>
       <button @click="dark = !dark; document.documentElement.classList.toggle('dark', dark)" class="text-sm px-3 py-1 rounded-full bg-gray-200 dark:bg-gray-700">
         <span x-text="dark ? 'Light' : 'Dark'"></span>
       </button>
     </header>
 
     <!-- HERO HEADER (large, top of home) -->
-    <section class="p-6 bg-gradient-to-b from-blue-100 to-blue-50 dark:from-blue-950 dark:to-gray-900 text-center">
-      <h2 class="text-2xl md:text-3xl font-bold leading-tight mb-3">That $1.59 prebuy price? Do you know what you'll REALLY pay in January?</h2>
-      <p class="text-sm md:text-base text-gray-700 dark:text-gray-300 mb-5">Any propane company can advertise a low locked-in price during contract season. Once that season ends, will-call customers pay a different price, often much higher. And the advertised price is usually just the starting price: it doesn't include sales tax, service or delivery fees, environmental/hazmat fees, or tank rental and lease fees.</p>
-      <button @click="tab = 'explainer'" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-3 rounded-lg shadow">Know the difference → Locked-in vs. Will-call</button>
+    <section class="relative p-6 text-center text-white overflow-hidden" style="background-image: url('assets/hero.jpg'); background-size: cover; background-position: center;">
+      <div class="absolute inset-0 bg-black/60"></div>
+      <div class="relative z-10">
+        <h2 class="text-2xl md:text-3xl font-bold leading-tight mb-3">That $1.59 prebuy price? Do you know what you'll REALLY pay in January?</h2>
+        <p class="text-sm md:text-base text-gray-100 mb-5">Any propane company can advertise a low locked-in price during contract season. Once that season ends, will-call customers pay a different price, often much higher. And the advertised price is usually just the starting price: it doesn't include sales tax, service or delivery fees, environmental/hazmat fees, or tank rental and lease fees.</p>
+        <button @click="tab = 'explainer'" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-3 rounded-lg shadow">Know the difference → Locked-in vs. Will-call</button>
+      </div>
     </section>
 
     <!-- Anonymous Toggle -->
