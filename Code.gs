@@ -11,6 +11,7 @@
 
 const SPREADSHEET_ID = '1TSYfLOIrsUbPrCxMxWTYNqAYqeQtPGer8gOGCoJuJU8';
 const MAX_POSTS_PER_HOUR = 5;
+const MAX_REPORTS_PER_HOUR = 20;
 const PRICE_MIN = 0.50;
 const PRICE_MAX = 9.99;
 const MAX_TEXT = 500;
@@ -28,14 +29,21 @@ function doPost(e) {
   try {
     const data = JSON.parse(e.postData.contents);
     const deviceId = (data.deviceId || '').toString().slice(0, 64);
-    if (!checkRateLimit(deviceId)) {
-      return jsonResponse({ ok: false, error: 'Too many posts. Try again later.' });
+    if (!deviceId) {
+      return jsonResponse({ ok: false, error: 'Please refresh and try again' });
     }
 
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
 
     if (data.action === 'report') {
+      if (!checkRateLimit(deviceId, 'report', MAX_REPORTS_PER_HOUR)) {
+        return jsonResponse({ ok: false, error: 'Too many reports. Try again later.' });
+      }
       return handleReport(ss, data);
+    }
+
+    if (!checkRateLimit(deviceId, 'post', MAX_POSTS_PER_HOUR)) {
+      return jsonResponse({ ok: false, error: 'Too many posts. Try again later.' });
     }
 
     if (data.type === 'price') {
@@ -58,7 +66,9 @@ function handlePrice(ss, data) {
     return jsonResponse({ ok: false, error: 'Price must be between $0.50 and $9.99' });
   }
   const sheet = ss.getSheetByName('Prices');
+  const id = Utilities.getUuid();
   const row = [
+    id,
     new Date().toISOString(),
     sanitize(data.town_zip),
     sanitize(data.supplier),
@@ -70,42 +80,66 @@ function handlePrice(ss, data) {
     'live',
     0
   ];
-  sheet.appendRow(row);
-  return jsonResponse({ ok: true });
+  const lock = LockService.getScriptLock();
+  lock.waitLock(5000);
+  try {
+    sheet.appendRow(row);
+  } finally {
+    lock.releaseLock();
+  }
+  return jsonResponse({ ok: true, id: id });
 }
 
 function handleDiscuss(ss, data) {
+  const postText = (data.post || '').toString().trim();
+  if (!postText) {
+    return jsonResponse({ ok: false, error: 'Post cannot be empty' });
+  }
   const sheet = ss.getSheetByName('Discuss');
+  const id = Utilities.getUuid();
   const row = [
+    id,
     new Date().toISOString(),
     sanitize(data.town_zip),
     sanitize(data.supplier),
-    sanitize(data.post),
+    sanitize(postText),
     data.hide_name ? 'Anonymous' : sanitize(data.display_name || 'Anonymous'),
     'live',
     0
   ];
-  sheet.appendRow(row);
-  return jsonResponse({ ok: true });
+  const lock = LockService.getScriptLock();
+  lock.waitLock(5000);
+  try {
+    sheet.appendRow(row);
+  } finally {
+    lock.releaseLock();
+  }
+  return jsonResponse({ ok: true, id: id });
 }
 
 function handleReport(ss, data) {
   const sheetName = data.sheet === 'Discuss' ? 'Discuss' : 'Prices';
   const sheet = ss.getSheetByName(sheetName);
   const rows = sheet.getDataRange().getValues();
-  const tsCol = 0;
-  const statusCol = sheetName === 'Prices' ? 8 : 5;
-  const reportCol = sheetName === 'Prices' ? 9 : 6;
+  const idCol = 0;
+  const statusCol = sheetName === 'Prices' ? 9 : 6;
+  const reportCol = sheetName === 'Prices' ? 10 : 7;
 
-  for (let i = 1; i < rows.length; i++) {
-    if (rows[i][tsCol] === data.timestamp) {
-      const count = (parseInt(rows[i][reportCol], 10) || 0) + 1;
-      sheet.getRange(i + 1, reportCol + 1).setValue(count);
-      if (count >= 3) {
-        sheet.getRange(i + 1, statusCol + 1).setValue('hidden');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(5000);
+  try {
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i][idCol] === data.id) {
+        const count = (parseInt(rows[i][reportCol], 10) || 0) + 1;
+        sheet.getRange(i + 1, reportCol + 1).setValue(count);
+        if (count >= 3) {
+          sheet.getRange(i + 1, statusCol + 1).setValue('hidden');
+        }
+        return jsonResponse({ ok: true, report_count: count });
       }
-      return jsonResponse({ ok: true, report_count: count });
     }
+  } finally {
+    lock.releaseLock();
   }
   return jsonResponse({ ok: false, error: 'Post not found' });
 }
@@ -127,23 +161,26 @@ function getLiveRows(sheet, headers) {
 }
 
 function priceHeaders() {
-  return ['timestamp','town_zip','supplier','price_type','price_per_gal','fees_checked','comment','display_name','status','report_count'];
+  return ['id','timestamp','town_zip','supplier','price_type','price_per_gal','fees_checked','comment','display_name','status','report_count'];
 }
 function discussHeaders() {
-  return ['timestamp','town_zip','supplier','post','display_name','status','report_count'];
+  return ['id','timestamp','town_zip','supplier','post','display_name','status','report_count'];
 }
 
 function sanitize(str) {
   if (str == null) return '';
-  return String(str).replace(/<[^>]*>/g, '').slice(0, MAX_TEXT);
+  let s = String(str).replace(/<[^>]*>/g, '').slice(0, MAX_TEXT);
+  if (s.length && '=+-@'.indexOf(s.charAt(0)) !== -1) {
+    s = "'" + s;
+  }
+  return s;
 }
 
-function checkRateLimit(deviceId) {
-  if (!deviceId) return true;
+function checkRateLimit(deviceId, kind, max) {
   const cache = CacheService.getScriptCache();
-  const key = 'rate:' + deviceId;
+  const key = kind + ':' + deviceId;
   const current = parseInt(cache.get(key) || '0', 10);
-  if (current >= MAX_POSTS_PER_HOUR) return false;
+  if (current >= max) return false;
   cache.put(key, String(current + 1), 3600);
   return true;
 }

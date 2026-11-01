@@ -307,7 +307,7 @@
             if (!res.ok) throw new Error('Network error');
             const data = await res.json();
             this.prices = (data.prices || []).map(p => ({
-              id: p.timestamp,
+              id: p.id,
               supplier: p.supplier,
               town: p.town_zip,
               county: '',
@@ -321,7 +321,7 @@
               verified: false
             }));
             this.discussions = (data.discuss || []).map(d => ({
-              id: d.timestamp,
+              id: d.id,
               title: (d.post || '').split('\n')[0],
               body: (d.post || '').split('\n').slice(1).join('\n'),
               category: '',
@@ -334,12 +334,12 @@
             // keep existing arrays; show nothing new if offline
           }
         },
-        async reportPost(timestamp, sheet) {
+        async reportPost(id, sheet) {
           try {
             await fetch(WEB_APP_URL, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ action: 'report', timestamp, sheet, deviceId: this.deviceId })
+              body: JSON.stringify({ action: 'report', id, sheet, deviceId: this.deviceId })
             });
             await this.loadPosts();
           } catch (err) {
