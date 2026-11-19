@@ -1,0 +1,11 @@
+# Public board API. database_id is not a secret.
+# Replace the placeholder with the id printed by: npx wrangler d1 create spill-the-tank
+# Do not put an account email, an API token, or the moderator token in this file.
+name = "spill-the-tank"
+main = "worker/src/index.js"
+compatibility_date = "2025-11-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "spill-the-tank"
+database_id = "00000000-0000-0000-0000-000000000000"
