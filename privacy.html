@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy — Spill the Tank</title>
+  <meta name="description" content="What Spill the Tank stores: public price posts, a random handle in your browser, and no email, bill upload, or GPS.">
+  <meta name="theme-color" content="#1e3a8a">
+  <meta name="referrer" content="no-referrer">
+  <link rel="canonical" href="https://mwkleinert-glitch.github.io/spill-the-tank/privacy.html">
+  <meta property="og:title" content="Privacy — Spill the Tank">
+  <meta property="og:description" content="What Spill the Tank stores: public price posts, a random handle in your browser, and no email, bill upload, or GPS.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://mwkleinert-glitch.github.io/spill-the-tank/privacy.html">
+  <meta property="og:image" content="https://mwkleinert-glitch.github.io/spill-the-tank/assets/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Spill the Tank, an anonymous propane price board">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Privacy — Spill the Tank">
+  <meta name="twitter:description" content="Public price posts, a random handle in your browser, and no email, bill upload, or GPS.">
+  <meta name="twitter:image" content="https://mwkleinert-glitch.github.io/spill-the-tank/assets/og.png">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="assets/favicon.png" type="image/png">
+  <link rel="stylesheet" href="assets/pages.css">
+</head>
+<body>
+  <header>
+    <img src="assets/icon-48.png" alt="">
+    <a href="index.html">Spill the Tank</a>
+  </header>
+  <main>
+    <h1>Privacy</h1>
+    <p>Spill the Tank is a public board. This page describes what the site actually does.</p>
+
+    <h2>What you can post</h2>
+    <ul>
+      <li>Supplier, county, town or ZIP, price per gallon, price type (locked-in, will-call, or budget), whether the tank is owned or leased, a date, and fee checkboxes.</li>
+      <li>A discussion title, text, and category.</li>
+      <li>A random handle, such as “Blue Regulator 482”. The handle is created in your browser and saved in this browser’s local storage. It is not an account.</li>
+    </ul>
+
+    <h2>What the site does not do</h2>
+    <ul>
+      <li>No account, no email address, and no password.</li>
+      <li>No bill, photo, or other file upload.</li>
+      <li>No GPS. The site does not ask your device for a location. You type a town or ZIP.</li>
+      <li>No votes.</li>
+      <li>Your IP address is not stored with your post.</li>
+    </ul>
+
+    <h2>Who can see posts</h2>
+    <p>Live posts are public. Anyone who opens the site can read them. Hidden posts are not shown.</p>
+
+    <h2>Abuse controls</h2>
+    <ul>
+      <li>Posts have length limits.</li>
+      <li>Phone numbers, email addresses, web addresses, and street addresses in the text are rejected.</li>
+      <li>A hidden form field catches simple bots.</li>
+      <li>Each browser can publish five posts an hour and send twenty reports an hour. The limit uses a random id stored in that browser. The id is stored as a hash, separate from the public post, and it is not shown on the board.</li>
+      <li>Three reports from different browsers hide a post. The person who runs the site can also hide a post that breaks the terms.</li>
+    </ul>
+
+    <h2>Where posts live</h2>
+    <p>The pages are static files. Posts are sent to a separate server and saved in a database. That server is the only place posts are stored.</p>
+    <p>If a feature is not listed here, the site does not do it.</p>
+  </main>
+  <footer>
+    <a href="index.html">Back to the board</a>
+    ·
+    <a href="terms.html">Terms</a>
+  </footer>
+</body>
+</html>
